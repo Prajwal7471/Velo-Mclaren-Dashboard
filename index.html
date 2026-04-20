@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Velo × McLaren F1 — Interactive dashboard analysing BAT's 2025 Modern Oral performance with 2026 scenario forecasts, unit economics, and capacity modelling.">
+  <meta name="author" content="Portfolio project — BAT Velo Modern Oral analytics">
+  <title>Velo × McLaren F1 — Sales, Supply Chain & 2026 Outlook Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'mcl-papaya': 'var(--mcl-papaya)',
+            'mcl-papaya-bright': 'var(--mcl-papaya-bright)',
+            'mcl-papaya-dim': 'var(--mcl-papaya-dim)',
+            'velo-blue': 'var(--velo-blue)',
+            'carbon-0': 'var(--carbon-0)',
+            'carbon-1': 'var(--carbon-1)',
+            'carbon-2': 'var(--carbon-2)',
+            'carbon-3': 'var(--carbon-3)',
+            'carbon-4': 'var(--carbon-4)',
+            'text-hi': 'var(--text-hi)',
+            'text-mid': 'var(--text-mid)',
+            'text-lo': 'var(--text-lo)',
+            'signal-green': 'var(--signal-green)',
+            'signal-red': 'var(--signal-red)',
+            'signal-amber': 'var(--signal-amber)',
+          },
+          fontFamily: {
+            display: ['var(--font-display)'],
+            body: ['var(--font-body)'],
+            mono: ['var(--font-mono)'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --mcl-papaya: #FF8000;
+      --mcl-papaya-bright: #FF8700;
+      --mcl-papaya-dim: #B35E00;
+      --velo-blue: #0090D4;
+      --carbon-0: #000000;
+      --carbon-1: #0A0A0A;
+      --carbon-2: #141414;
+      --carbon-3: #1F1F1F;
+      --carbon-4: #2A2A2A;
+      --text-hi: #FFFFFF;
+      --text-mid: #CCCCCC;
+      --text-lo: #888888;
+      --signal-green: #00D67D;
+      --signal-red: #FF3B3B;
+      --signal-amber: #FFC400;
+
+      --font-display: "Inter", "Helvetica Neue", Arial, sans-serif;
+      --font-body: "Inter", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    body {
+      background-color: var(--carbon-0);
+      color: var(--text-hi);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-display { font-family: var(--font-display); }
+    .font-mono { font-family: var(--font-mono); }
+
+    .num-display {
+      font-feature-settings: "tnum" 1, "ss01" 1;
+      letter-spacing: -0.02em;
+      font-weight: 800;
+    }
+
+    .bg-carbon-pattern {
+      background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 8L8 0ZM-2 2L2 -2ZM6 10L10 6' stroke='white' stroke-width='1' fill='none' stroke-opacity='0.06'/%3E%3C/svg%3E");
+    }
+
+    .speed-divider {
+      height: 1px;
+      width: 60%;
+      background: linear-gradient(90deg, transparent, var(--mcl-papaya), transparent);
+      margin: 0 auto;
+    }
+
+    .mcl-card {
+      background-color: var(--carbon-2);
+      border: 1px solid var(--carbon-3);
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .mcl-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px -8px rgba(255,128,0,0.35);
+      background-color: var(--carbon-4);
+    }
+
+    .mcl-card-active { border-top: 3px solid var(--mcl-papaya); }
+
+    .chart-container {
+      position: relative;
+      height: clamp(260px, 32vh, 360px);
+      width: 100%;
+    }
+    .chart-container canvas {
+      transition: filter 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+    .chart-container:hover canvas {
+      filter: drop-shadow(0 4px 16px rgba(255, 128, 0, 0.25)) brightness(1.05);
+    }
+
+    .vintage-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-lo);
+      font-family: var(--font-mono);
+      letter-spacing: 0.02em;
+    }
+    .vintage-badge::before {
+      content: "";
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--signal-green);
+      box-shadow: 0 0 6px var(--signal-green);
+    }
+    .vintage-badge.illustrative::before { background: var(--signal-amber); box-shadow: 0 0 6px var(--signal-amber); }
+    .vintage-badge.framework::before { background: var(--velo-blue); box-shadow: 0 0 6px var(--velo-blue); }
+
+    .na-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-lo);
+      background: var(--carbon-3);
+      padding: 2px 6px;
+      border-radius: 2px;
+      letter-spacing: 0.03em;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--mcl-papaya);
+      color: #000;
+      padding: 8px 16px;
+      z-index: 100;
+      font-weight: 700;
+    }
+    .skip-link:focus { top: 0; }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      width: 100%;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 3px;
+      background: var(--carbon-4);
+      border-radius: 2px;
+    }
+    input[type=range]::-moz-range-track {
+      height: 3px;
+      background: var(--carbon-4);
+      border-radius: 2px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--mcl-papaya);
+      border-radius: 50%;
+      margin-top: -5px;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(255,128,0,0.5);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: var(--mcl-papaya);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(255,128,0,0.5);
+    }
+
+    .scenario-pill {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      border: 1px solid var(--carbon-3);
+      background: var(--carbon-2);
+      color: var(--text-lo);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .scenario-pill:hover { color: var(--text-mid); border-color: var(--carbon-4); }
+    .scenario-pill[aria-pressed="true"] {
+      background: var(--mcl-papaya);
+      color: #000;
+      border-color: var(--mcl-papaya);
+      box-shadow: 0 0 16px rgba(255,128,0,0.3);
+    }
+
+    .milestone-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--mcl-papaya);
+      box-shadow: 0 0 0 4px rgba(255,128,0,0.15), 0 0 0 8px rgba(255,128,0,0.05);
+      flex-shrink: 0;
+    }
+    .milestone-dot.launch { background: var(--signal-green); box-shadow: 0 0 0 4px rgba(0,214,125,0.15), 0 0 0 8px rgba(0,214,125,0.05); }
+    .milestone-dot.outlook { background: var(--velo-blue); box-shadow: 0 0 0 4px rgba(0,144,212,0.15), 0 0 0 8px rgba(0,144,212,0.05); }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    *:focus-visible { outline: 2px solid var(--mcl-papaya); outline-offset: 2px; }
+
+    @media print {
+      header, footer, nav, .no-print { display: none !important; }
+      body { background: #fff !important; color: #000 !important; }
+      .mcl-card { background: #fff !important; border: 1px solid #ccc !important; clip-path: none !important; color: #000 !important; page-break-inside: avoid; }
+      .mcl-card h3, .mcl-card p, .mcl-card td, .mcl-card th { color: #000 !important; }
+      .speed-divider { background: #000 !important; }
+      section { page-break-after: always; }
+      .chart-container { height: 280px !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <a href="#overview" class="skip-link">Skip to content</a>
+
+  <header class="sticky top-0 z-50 bg-carbon-1 border-b border-mcl-papaya bg-carbon-pattern px-4 md:px-12 py-3 shadow-lg no-print">
+    <div class="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-2 font-display font-black text-xl tracking-tighter">
+        <span>VELO</span>
+        <span class="text-text-lo font-normal">×</span>
+        <span class="text-mcl-papaya">McLaren F1 Team</span>
+        <span class="text-[10px] font-mono font-normal text-text-lo ml-2 hidden lg:inline">MODERN ORAL · ANALYTICS</span>
+      </div>
+      <nav class="flex overflow-x-auto w-full md:w-auto gap-6 text-sm font-semibold text-text-lo hide-scrollbar" aria-label="Main Navigation">
+        <a href="#overview" class="nav-link hover:text-mcl-papaya transition-colors whitespace-nowrap">Overview</a>
+        <a href="#sales" class="nav-link hover:text-mcl-papaya transition-colors whitespace-nowrap">Sales</a>
+        <a href="#competitive" class="nav-link hover:text-mcl-papaya transition-colors whitespace-nowrap">Competitive</a>
+        <a href="#supply-chain" class="nav-link hover:text-mcl-papaya transition-colors whitespace-nowrap">Supply Chain</a>
+        <a href="#outlook" class="nav-link hover:text-mcl-papaya transition-colors whitespace-nowrap">2026 Outlook</a>
+        <a href="#recommendations" class="nav-link hover:text-mcl-papaya transition-colors whitespace-nowrap">Actions</a>
+      </nav>
+      <div class="flex items-center gap-3 text-xs text-text-lo">
+        <span id="last-updated" class="hidden md:inline font-mono"></span>
+        <button id="btn-methodology" class="hover:text-text-hi transition-colors px-2 py-1 border border-carbon-3 rounded text-[10px] font-mono" aria-label="Open methodology">METHOD</button>
+        <button id="btn-export-pdf" class="hover:text-text-hi transition-colors p-1" aria-label="Export PDF" title="Export PDF">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </button>
+        <button id="btn-export-csv" class="hover:text-text-hi transition-colors p-1" aria-label="Export CSV" title="Export CSV">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="max-w-[1440px] mx-auto px-[clamp(16px,4vw,48px)] pb-24">
+
+    <!-- SECTION 1: EXECUTIVE OVERVIEW -->
+    <section id="overview" class="scroll-mt-24 mt-8 md:mt-14">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+        <div>
+          <div class="text-[11px] font-mono text-mcl-papaya tracking-widest mb-2">DASHBOARD · FY2025 REVIEW & 2026 PLANNING</div>
+          <h1 class="text-3xl md:text-4xl font-display font-bold mb-3 leading-tight">Velo is winning the US Modern Oral race —<br class="hidden md:block"> the 2026 question is whether we can <span class="text-mcl-papaya">build capacity fast enough to hold pole position</span>.</h1>
+          <p class="text-text-mid text-sm max-w-3xl">Modern Oral revenue grew <strong class="text-text-hi">+47.4%</strong> in FY2025 to <strong class="text-text-hi">£1,165m</strong>, with Velo capturing <strong class="text-text-hi">24.0%</strong> US volume share by December — a <strong class="text-text-hi">+17.9pp</strong> gain in 13 months. This dashboard turns BAT's public 2025 disclosures into a decision tool for 2026 capex, pricing, and regulatory strategy.</p>
+        </div>
+        <div class="flex gap-2 bg-carbon-2 p-1 rounded border border-carbon-3 text-sm shrink-0 no-print">
+          <select id="filter-region" class="bg-transparent text-text-hi border-none outline-none focus:ring-0 cursor-pointer py-1 px-2" aria-label="Filter Region">
+            <option value="GLOBAL">Global</option>
+            <option value="US">US Market</option>
+            <option value="AME">AME</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" id="hero-kpis"></div>
+
+      <div class="mcl-card p-5 mcl-card-active">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-4 h-4 text-mcl-papaya" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <h3 class="font-display font-bold text-sm tracking-wider">EXECUTIVE SUMMARY — THREE MOVES FOR 2026</h3>
+        </div>
+        <ol class="grid md:grid-cols-3 gap-4 text-sm">
+          <li class="border-l-2 border-mcl-papaya pl-3">
+            <div class="font-bold text-text-hi mb-1">1. Fund capacity, don't starve it.</div>
+            <div class="text-text-mid">At 47% volume growth and 90% weighted distribution, line utilisation is the binding constraint on 2026 revenue, not demand. Approve $50M Q1 capex.</div>
+          </li>
+          <li class="border-l-2 border-mcl-papaya pl-3">
+            <div class="font-bold text-text-hi mb-1">2. Defend the 70% repurchase.</div>
+            <div class="text-text-mid">Retention is the unit-economic moat. A 10pp drop in monthly retention roughly halves LTV. Protect product quality and pricing before chasing new trial.</div>
+          </li>
+          <li class="border-l-2 border-mcl-papaya pl-3">
+            <div class="font-bold text-text-hi mb-1">3. Win the regulatory file.</div>
+            <div class="text-text-mid">Only Altria's on! PLUS has FDA clearance so far. First-to-approval on updated Velo SKUs is worth more than another pp of share.</div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <div class="speed-divider my-8 md:my-14"></div>
+
+    <!-- SECTION 2: SALES PERFORMANCE -->
+    <section id="sales" class="scroll-mt-24">
+      <div class="mb-6">
+        <h2 class="text-xl font-display font-bold mb-2">Sales Performance</h2>
+        <p class="text-text-mid text-sm max-w-3xl">Revenue, volume, and US share trajectory. Only BAT-disclosed data points are plotted as solid markers; interpolated paths are shown as dashed fits and labelled accordingly.</p>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <div class="mcl-card p-5 xl:col-span-2">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h3 class="font-semibold text-text-hi">Modern Oral Revenue & Volume (£m, YoY)</h3>
+              <span class="vintage-badge mt-1">BAT FY2025 · Feb 2026</span>
+            </div>
+            <button class="export-png-btn text-text-lo hover:text-mcl-papaya no-print" data-target="chart-revenue-yoy" aria-label="Export Chart PNG"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+          </div>
+          <p class="text-xs text-text-lo mb-4">Revenue and volume grew in near-lockstep (+47.4% vs +47.1%), suggesting growth is volume-led rather than price-led. Pricing power is latent, not active.</p>
+          <figure class="chart-container">
+            <canvas id="chart-revenue-yoy" aria-label="Revenue and volume 2024 vs 2025"></canvas>
+          </figure>
+        </div>
+
+        <div class="mcl-card p-5">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h3 class="font-semibold text-text-hi">US Volume Share Trajectory</h3>
+              <span class="vintage-badge illustrative mt-1">Endpoints disclosed · Interior fitted</span>
+            </div>
+            <button class="export-png-btn text-text-lo hover:text-mcl-papaya no-print" data-target="chart-us-share" aria-label="Export Chart PNG"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+          </div>
+          <p class="text-xs text-text-lo mb-4">Only Nov-24 (6.1%) and Dec-25 (24.0%) are publicly disclosed. The dashed curve is a logistic fit between endpoints for visual context — not BAT data.</p>
+          <figure class="chart-container">
+            <canvas id="chart-us-share" aria-label="US volume share Nov 2024 to Dec 2025"></canvas>
+          </figure>
+        </div>
+
+        <div class="mcl-card p-5 xl:col-span-3">
+          <h3 class="font-semibold text-text-hi mb-1">US Rollout — 14-Month Milestone Ribbon</h3>
+          <p class="text-xs text-text-lo mb-5">From Velo Plus launch to #2 category position. Share of weighted distribution grew from ~0% to ~90% across ~135k c-stores.</p>
+          <ol id="milestone-ribbon" class="relative flex flex-col md:flex-row gap-4 md:gap-2 md:items-start" aria-label="Rollout milestones"></ol>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="speed-divider my-8 md:my-14"></div>
+
+    <!-- SECTION 3: COMPETITIVE -->
+    <section id="competitive" class="scroll-mt-24">
+      <div class="mb-6">
+        <h2 class="text-xl font-display font-bold mb-2">Competitive Landscape — US Modern Oral</h2>
+        <p class="text-text-mid text-sm max-w-3xl">Zyn's share is reported in a 55–70% band across public sources; midpoint used for visualisation. Chart shows Zyn's range rather than a false point estimate.</p>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <div class="mcl-card p-5">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h3 class="font-semibold text-text-hi">Share Snapshot (Dec 2025)</h3>
+              <span class="vintage-badge illustrative mt-1">Industry estimates · Q4 2025</span>
+            </div>
+            <button class="export-png-btn text-text-lo hover:text-mcl-papaya no-print" data-target="chart-competitive-donut" aria-label="Export Chart PNG"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+          </div>
+          <p class="text-xs text-text-lo mb-4">Velo is now the clear #2. Zyn remains dominant but its share has compressed vs 2024.</p>
+          <figure class="chart-container relative">
+            <canvas id="chart-competitive-donut" aria-label="Market share donut chart"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span class="text-xs text-text-lo">Velo Position</span>
+              <span class="text-2xl font-display num-display text-mcl-papaya">#2</span>
+            </div>
+          </figure>
+        </div>
+
+        <div class="mcl-card p-5 xl:col-span-2">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h3 class="font-semibold text-text-hi">Velo vs Zyn — Share Trajectory with Uncertainty Band</h3>
+              <span class="vintage-badge illustrative mt-1">Zyn band: public range 55–70%</span>
+            </div>
+            <button class="export-png-btn text-text-lo hover:text-mcl-papaya no-print" data-target="chart-share-evolution" aria-label="Export Chart PNG"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+          </div>
+          <p class="text-xs text-text-lo mb-4">Gap to leader is narrowing by ~1.4pp per month on fitted trend. Band shows range of public Zyn estimates — any projection should assume leader defends.</p>
+          <figure class="chart-container">
+            <canvas id="chart-share-evolution" aria-label="Velo vs Zyn share trajectory"></canvas>
+          </figure>
+        </div>
+
+        <div class="mcl-card p-5 xl:col-span-3">
+          <h3 class="font-semibold text-text-hi mb-3">Positioning Matrix — Price vs Innovation</h3>
+          <p class="text-xs text-text-lo mb-4">Relative positioning (illustrative framework). Velo Plus occupies the "high-nicotine, promo-priced trial" quadrant that has driven its US repurchase rate.</p>
+          <figure class="chart-container" style="height:320px;">
+            <canvas id="chart-positioning" aria-label="Competitive positioning scatter"></canvas>
+          </figure>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="speed-divider my-8 md:my-14"></div>
+
+    <!-- SECTION 4: SUPPLY CHAIN -->
+    <section id="supply-chain" class="scroll-mt-24">
+      <div class="mb-6">
+        <h2 class="text-xl font-display font-bold mb-2">Supply Chain & Operations</h2>
+        <p class="text-text-mid text-sm max-w-3xl">No public BAT operational data is available at SKU or plant level. Charts in this section are clearly labelled as frameworks — stylised models of the operational dynamics that the disclosed 47% growth implies.</p>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+        <div class="mcl-card p-5">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h3 class="font-semibold text-text-hi">Bullwhip Signal — Demand Variance Amplification</h3>
+              <span class="vintage-badge framework mt-1">Illustrative operational framework</span>
+            </div>
+            <button class="export-png-btn text-text-lo hover:text-mcl-papaya no-print" data-target="chart-bullwhip" aria-label="Export Chart PNG"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+          </div>
+          <p class="text-xs text-text-lo mb-4">A small swing in retail demand amplifies up the chain to the factory plan. At 47% category growth, forecast error at the plant is multiplied — the case for demand sensing and vendor-managed inventory.</p>
+          <figure class="chart-container">
+            <canvas id="chart-bullwhip" aria-label="Bullwhip framework illustration"></canvas>
+          </figure>
+        </div>
+
+        <div class="mcl-card p-5">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h3 class="font-semibold text-text-hi">Inventory Days-on-Hand — Framework View</h3>
+              <span class="vintage-badge framework mt-1">Illustrative operational framework</span>
+            </div>
+            <button class="export-png-btn text-text-lo hover:text-mcl-papaya no-print" data-target="chart-inventory" aria-label="Export Chart PNG"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+          </div>
+          <p class="text-xs text-text-lo mb-4">Typical CPG target: 45–60 days. Below the 30d safety-stock line, stockout risk rises sharply. Framework view — not sourced from BAT.</p>
+          <figure class="chart-container">
+            <canvas id="chart-inventory" aria-label="Inventory days-on-hand framework"></canvas>
+          </figure>
+        </div>
+
+        <div class="mcl-card p-5 xl:col-span-2">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-text-hi">Risk Register — Ranked by Revenue-at-Risk</h3>
+            <span class="vintage-badge mt-1">Assessment framework</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="text-[11px] text-text-lo uppercase bg-carbon-3 font-mono tracking-wider">
+                <tr>
+                  <th class="px-4 py-3">Severity</th>
+                  <th class="px-4 py-3">Risk</th>
+                  <th class="px-4 py-3">Revenue at Risk (est.)</th>
+                  <th class="px-4 py-3">Mitigation</th>
+                  <th class="px-4 py-3">Owner</th>
+                </tr>
+              </thead>
+              <tbody id="risk-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="speed-divider my-8 md:my-14"></div>
+
+    <!-- SECTION 5: 2026 OUTLOOK -->
+    <section id="outlook" class="scroll-mt-24">
+      <div class="flex flex-col md:flex-row md:justify-between md:items-end mb-6 gap-4">
+        <div>
+          <h2 class="text-xl font-display font-bold mb-2">2026 Outlook — Scenarios, Unit Economics & Capacity</h2>
+          <p class="text-text-mid text-sm max-w-3xl">Three-scenario forecast built on public FY2025 actuals. Unit economics and capacity payback are parametric — adjust the inputs to stress-test assumptions.</p>
+        </div>
+        <div role="group" aria-label="Forecast scenario" class="flex gap-1 no-print">
+          <button class="scenario-pill" data-scenario="bear" aria-pressed="false">Bear</button>
+          <button class="scenario-pill" data-scenario="base" aria-pressed="true">Base</button>
+          <button class="scenario-pill" data-scenario="bull" aria-pressed="false">Bull</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+        <div class="mcl-card p-5 xl:col-span-2">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h3 class="font-semibold text-text-hi">Modern Oral Revenue — Actuals & 2026 Fan</h3>
+              <span class="vintage-badge mt-1">Actuals BAT · Forecast parametric</span>
+            </div>
+            <button class="export-png-btn text-text-lo hover:text-mcl-papaya no-print" data-target="chart-forecast" aria-label="Export Chart PNG"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+          </div>
+          <p class="text-xs text-text-lo mb-4">Bear: +15% — regulatory tightening, competitor counter-launch. Base: +30% — trajectory moderates, 2 of 4 PMTAs clear. Bull: +45% — sustained share gains, AME acceleration.</p>
+          <figure class="chart-container" style="height:360px;">
+            <canvas id="chart-forecast" aria-label="2026 revenue forecast fan chart"></canvas>
+          </figure>
+        </div>
+
+        <div class="mcl-card p-5">
+          <h3 class="font-semibold text-text-hi mb-3">Scenario Summary</h3>
+          <div id="scenario-summary" class="text-sm space-y-3"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+        <div class="mcl-card p-5">
+          <h3 class="font-semibold text-text-hi mb-2">Unit Economics — LTV per US Consumer</h3>
+          <p class="text-xs text-text-lo mb-4">A simple contribution-margin LTV model. Geometric retention series: LTV = monthly contribution ÷ (1 − monthly retention). Adjust inputs to sensitise.</p>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Cans / month</span><span id="ue-cans-val" class="font-mono text-text-hi">18</span></div>
+              <input type="range" id="ue-cans" min="8" max="30" value="18" step="1">
+            </label>
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Wholesale $/can</span><span id="ue-price-val" class="font-mono text-text-hi">2.00</span></div>
+              <input type="range" id="ue-price" min="1.5" max="3.0" value="2.0" step="0.05">
+            </label>
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Gross margin %</span><span id="ue-gm-val" class="font-mono text-text-hi">55</span></div>
+              <input type="range" id="ue-gm" min="35" max="70" value="55" step="1">
+            </label>
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Monthly retention %</span><span id="ue-ret-val" class="font-mono text-text-hi">70</span></div>
+              <input type="range" id="ue-ret" min="40" max="90" value="70" step="1">
+            </label>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-carbon-3 p-3 rounded">
+              <div class="text-[10px] font-mono text-text-lo uppercase">Monthly Contrib</div>
+              <div id="ue-monthly" class="text-xl font-display num-display text-text-hi">$19.80</div>
+            </div>
+            <div class="bg-carbon-3 p-3 rounded">
+              <div class="text-[10px] font-mono text-text-lo uppercase">Avg Life (mo)</div>
+              <div id="ue-life" class="text-xl font-display num-display text-text-hi">3.3</div>
+            </div>
+            <div class="bg-carbon-3 p-3 rounded border border-mcl-papaya">
+              <div class="text-[10px] font-mono text-mcl-papaya uppercase">LTV</div>
+              <div id="ue-ltv" class="text-xl font-display num-display text-mcl-papaya">$66</div>
+            </div>
+          </div>
+          <p class="text-[10px] text-text-lo mt-3">Rule of thumb: LTV ÷ CAC should exceed 3×. A 10pp drop in retention (70→60) reduces LTV by roughly 40%.</p>
+        </div>
+
+        <div class="mcl-card p-5">
+          <h3 class="font-semibold text-text-hi mb-2">Capacity Expansion — Payback Model</h3>
+          <p class="text-xs text-text-lo mb-4">A single-line capex evaluated against incremental contribution. Output is in months — the strategic question is whether payback fits inside the competitive window before Zyn reprices or FDA decisions clear competitor pipelines.</p>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Capex ($M)</span><span id="cap-capex-val" class="font-mono text-text-hi">50</span></div>
+              <input type="range" id="cap-capex" min="20" max="120" value="50" step="5">
+            </label>
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Added capacity (M cans/yr)</span><span id="cap-cap-val" class="font-mono text-text-hi">35</span></div>
+              <input type="range" id="cap-cap" min="10" max="80" value="35" step="5">
+            </label>
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Wholesale $/can</span><span id="cap-price-val" class="font-mono text-text-hi">2.00</span></div>
+              <input type="range" id="cap-price" min="1.5" max="3.0" value="2.0" step="0.05">
+            </label>
+            <label class="block">
+              <div class="flex justify-between text-xs text-text-mid mb-1"><span>Gross margin %</span><span id="cap-gm-val" class="font-mono text-text-hi">55</span></div>
+              <input type="range" id="cap-gm" min="35" max="70" value="55" step="1">
+            </label>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-carbon-3 p-3 rounded">
+              <div class="text-[10px] font-mono text-text-lo uppercase">Annual Contrib</div>
+              <div id="cap-contrib" class="text-xl font-display num-display text-text-hi">$38.5M</div>
+            </div>
+            <div class="bg-carbon-3 p-3 rounded border border-mcl-papaya">
+              <div class="text-[10px] font-mono text-mcl-papaya uppercase">Payback</div>
+              <div id="cap-payback" class="text-xl font-display num-display text-mcl-papaya">15.6 mo</div>
+            </div>
+            <div class="bg-carbon-3 p-3 rounded">
+              <div class="text-[10px] font-mono text-text-lo uppercase">3-yr NPV (10%)</div>
+              <div id="cap-npv" class="text-xl font-display num-display text-text-hi">$45.7M</div>
+            </div>
+          </div>
+          <p class="text-[10px] text-text-lo mt-3">Payback under 18 months gives headroom before peer PMTA decisions; above 24 months requires deeper scrutiny.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="speed-divider my-8 md:my-14"></div>
+
+    <!-- SECTION 6: RECOMMENDATIONS -->
+    <section id="recommendations" class="scroll-mt-24">
+      <div class="mb-6">
+        <h2 class="text-xl font-display font-bold mb-2">Strategic Recommendations — Decisions, Not Observations</h2>
+        <p class="text-text-mid text-sm max-w-3xl">Five prioritised actions. Each has a named owner, a cost/effort estimate, a measurable outcome, and a KPI to track it against. Prioritisation by estimated revenue-at-risk or incremental contribution.</p>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="recommendations-container"></div>
+    </section>
+
+  </main>
+
+  <!-- METHODOLOGY MODAL -->
+  <div id="methodology-modal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4 no-print" role="dialog" aria-labelledby="method-title" aria-modal="true">
+    <div class="bg-carbon-1 border border-carbon-3 max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6 md:p-8">
+      <div class="flex justify-between items-start mb-4">
+        <h2 id="method-title" class="text-xl font-display font-bold">Methodology & Data Provenance</h2>
+        <button id="btn-close-method" class="text-text-lo hover:text-text-hi text-2xl leading-none" aria-label="Close">&times;</button>
+      </div>
+      <div class="text-sm text-text-mid space-y-4">
+        <div>
+          <h3 class="text-text-hi font-bold mb-1">Data sources</h3>
+          <p>BAT FY2025 Preliminary Results (12 Feb 2026); BAT H1 2025 Interim Results (30 Jul 2025); industry share estimates for US Modern Oral (Circana/Nielsen public summaries). No internal BAT data is used.</p>
+        </div>
+        <div>
+          <h3 class="text-text-hi font-bold mb-1">What is "actual" vs "modelled"</h3>
+          <p>All KPI numbers and the 2024/2025 revenue columns are drawn directly from BAT disclosures. The US share trajectory plots only two disclosed points (Nov-24: 6.1%, Dec-25: 24.0%) — the dashed curve between them is a logistic fit for visual context, not data. All supply chain charts are labelled <em>illustrative operational framework</em> because no public SKU-level data exists.</p>
+        </div>
+        <div>
+          <h3 class="text-text-hi font-bold mb-1">Forecast construction</h3>
+          <p>Three-scenario fan around FY2025 actuals. Base +30% is ~1.5σ below trailing growth; Bull +45% assumes trajectory holds; Bear +15% assumes regulatory tightening and one major competitor counter-launch. No Monte Carlo — deliberate parametric simplicity for decision use.</p>
+        </div>
+        <div>
+          <h3 class="text-text-hi font-bold mb-1">Unit economics</h3>
+          <p>LTV = monthly contribution ÷ (1 − monthly retention). Standard geometric-series customer lifetime. Inputs are user-adjustable. "Monthly retention" here is a simplification — in practice it should be modelled as monthly churn with cohort decay; this version is built for quick sensitivity.</p>
+        </div>
+        <div>
+          <h3 class="text-text-hi font-bold mb-1">Capacity payback</h3>
+          <p>Payback months = Capex ÷ (Annual incremental capacity × Wholesale price × Gross margin ÷ 12). NPV uses a 10% discount rate over three years at flat run-rate. No terminal value. Assumes the new line sells out — a bullish assumption flagged in the Bear case.</p>
+        </div>
+        <div>
+          <h3 class="text-text-hi font-bold mb-1">Design choices</h3>
+          <p>Single-file deploy to GitHub Pages, zero build step, Tailwind + Chart.js via CDN. Colour system matches the Velo × McLaren livery with WCAG AA contrast. No browser storage, no cookies, no analytics.</p>
+        </div>
+        <div>
+          <h3 class="text-text-hi font-bold mb-1">With internal access, I would add</h3>
+          <p>SKU-level inventory DOH by DC, actual plant utilisation, PMTA timeline detail, Velo vs Velo Plus cannibalisation, and cohort-level repurchase curves. The framework charts in this dashboard are placeholders for those real data feeds.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-carbon-1 border-t border-carbon-3 py-8 mt-12 text-sm text-text-lo">
+    <div class="max-w-[1440px] mx-auto px-[clamp(16px,4vw,48px)] flex flex-col md:flex-row justify-between gap-6">
+      <div class="max-w-2xl">
+        <p class="mb-2"><strong class="text-text-mid">Sources:</strong> BAT FY2025 preliminary results (Feb 2026), BAT H1 2025 interim results (Jul 2025), Circana / Nielsen US Modern Oral public share summaries (Nov 2024 – Dec 2025).</p>
+        <p class="mb-2"><strong class="text-text-mid">Disclosure:</strong> Portfolio project — not affiliated with BAT, Velo, or the McLaren F1 Team. Built from public information only. Livery inspired by the Velo × McLaren partnership.</p>
+      </div>
+      <div class="flex flex-col gap-2 md:text-right">
+        <p class="font-mono text-xs">Generated: <span id="build-date"></span></p>
+        <p class="text-xs">Velo × McLaren F1 · Modern Oral Analytics</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    "use strict";
+
+    /* ===== DATA MODEL — real vs modelled clearly separated ===== */
+    const DATA = {
+      actuals: {
+        modernOral: {
+          revenue_2024: 791,           // £m, BAT FY2025 comparative
+          revenue_2025: 1165,          // £m, BAT FY2025 preliminary
+          revenue_growth_pct: 47.4,
+          volume_growth_pct: 47.1
+        },
+        usVeloShare: {
+          disclosedPoints: [
+            { month: '2024-11', pct: 6.1, source: 'BAT H1 2025 commentary' },
+            { month: '2025-12', pct: 24.0, source: 'BAT FY2025 results' }
+          ],
+          deltaPp: 17.9
+        },
+        veloPlus: {
+          repurchaseRatePct: 70,
+          revenueGrowth: 'Triple-digit %',
+          launchDate: '2024-11'
+        },
+        rollout: {
+          storesK: 135,
+          weightedDistPct: 90,
+          months: 12
+        }
+      },
+
+      estimates: {
+        competitors: [
+          { brand: 'Zyn (PMI)',        share: 62.0, range: [55, 70], colour: '--velo-blue', note: 'Public estimates range 55–70%' },
+          { brand: 'Velo + Velo Plus', share: 24.0, range: null, colour: '--mcl-papaya', note: 'Disclosed' },
+          { brand: 'on! (Altria)',     share: 8.5,  range: [7, 10], colour: '#888888', note: 'Estimate' },
+          { brand: 'Rogue / Others',   share: 5.5,  range: [4, 8], colour: '#444444', note: 'Estimate' }
+        ],
+        regional: [
+          { region: 'United States',     vol_share_pct: 24.0, status: 'disclosed' },
+          { region: 'AME aggregate',     vol_share_pct: null, status: 'leader_not_quantified' },
+          { region: 'Rest of World',     vol_share_pct: null, status: 'not_disclosed' }
+        ]
+      },
+
+      milestones: [
+        { date: '2024-11', label: 'Velo Plus US launch', detail: 'Higher nicotine + moisture; promo-priced trial', type: 'launch' },
+        { date: '2025-Q1', label: 'National rollout begins', detail: '~50% weighted distribution by Mar 2025', type: 'milestone' },
+        { date: '2025-Q3', label: '#2 US share reached', detail: 'Overtakes on! PLUS to become category #2', type: 'milestone' },
+        { date: '2025-12', label: '24% volume share, 90% dist.', detail: '~135k stores; +17.9pp share YoY', type: 'milestone' },
+        { date: '2026-H1', label: 'PMTA decisions expected', detail: 'Updated Velo SKUs in FDA pipeline', type: 'outlook' }
+      ],
+
+      /* Forecast — parametric, NOT disclosed */
+      forecast: {
+        history: [
+          { year: 2024, rev: 791 },
+          { year: 2025, rev: 1165 }
+        ],
+        scenarios: {
+          bear: {
+            yoy: 15, rev: Math.round(1165 * 1.15),
+            rationale: 'Regulatory tightening + competitor counter-launch; Velo share gains plateau near current 24%.',
+            drivers: ['FDA marketing order issued to BAT', 'Zyn repricing defence', 'AME category slows']
+          },
+          base: {
+            yoy: 30, rev: Math.round(1165 * 1.30),
+            rationale: 'Trajectory moderates naturally as base grows; 2 of 4 PMTAs clear; AME remains category leader.',
+            drivers: ['US share climbs to ~30%', 'Velo Plus matures into steady-state repurchase', 'No major regulatory surprise']
+          },
+          bull: {
+            yoy: 45, rev: Math.round(1165 * 1.45),
+            rationale: 'FDA clears Velo pipeline; US share continues S-curve; AME and new EM markets accelerate.',
+            drivers: ['Full PMTA approval set', 'US share >35%', 'New EM launches hit run-rate']
+          }
+        }
+      },
+
+      /* Bullwhip illustrative framework */
+      bullwhip: {
+        months: ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12'],
+        retail:      [100, 102,  98, 103, 101,  99, 105, 108, 104, 107, 110, 112],
+        distributor: [100, 106,  93, 110, 102,  94, 114, 122, 105, 117, 124, 130],
+        factory:     [100, 114,  82, 126, 102,  82, 136, 156, 116, 138, 158, 174]
+      },
+
+      inventory: {
+        months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        days:   [52, 48, 44, 41, 38, 35, 42, 48, 51, 46, 42, 39],
+        safetyStock: 30,
+        targetLo: 45,
+        targetHi: 60
+      },
+
+      risks: [
+        { sev: 'HIGH',   risk: 'Capacity ceiling hit mid-2026', revAtRisk: '£80–120m', mitigation: 'Q1 2026 capex on second US/EU line (~$50M)', owner: 'Supply Chain SVP' },
+        { sev: 'HIGH',   risk: 'FDA PMTA denial on updated SKUs', revAtRisk: '£40–90m', mitigation: 'Legal/Reg taskforce; parallel reformulation', owner: 'Regulatory & Legal' },
+        { sev: 'MEDIUM', risk: 'Zyn promotional counter-launch', revAtRisk: '£20–60m', mitigation: 'Pre-plan trade programme; protect 70% repurchase', owner: 'US Commercial' },
+        { sev: 'MEDIUM', risk: 'Bullwhip-driven regional stockouts', revAtRisk: '£15–35m', mitigation: 'Demand sensing + VMI for top-50 chains', owner: 'Supply Chain Ops' },
+        { sev: 'LOW',    risk: 'Counterfeit Velo Plus in secondary channels', revAtRisk: '£5–15m', mitigation: 'Serialisation, brand protection monitoring', owner: 'Brand Protection' }
+      ],
+
+      recommendations: [
+        {
+          title: 'Approve $50M capacity expansion by end Q1 2026',
+          owner: 'Supply Chain SVP · CFO co-sign',
+          cost: '$50M capex, 10–14 month install',
+          outcome: '+35M cans/year run-rate → ~$38M annual contribution',
+          kpi: 'Payback < 18 months · Fill rate > 98% sustained',
+          rationale: 'At 47% volume growth and 90% weighted distribution, the binding constraint on 2026 revenue is capacity, not demand. Deferring risks £80–120m of at-risk revenue if a peak Q3 stockout materialises.',
+          priority: 1
+        },
+        {
+          title: 'Defend the 70% Velo Plus repurchase rate',
+          owner: 'US Commercial SVP · Brand Director',
+          cost: '$8–12M trade + marketing; no net margin impact',
+          outcome: 'Protect LTV — a 10pp retention drop roughly halves LTV',
+          kpi: '13-week rolling repurchase ≥ 68% · NPS ≥ category median',
+          rationale: 'Retention is the moat. Before chasing new trial, protect the existing cohort against Zyn counter-launch and price compression.',
+          priority: 2
+        },
+        {
+          title: 'Accelerate FDA PMTA dossier on updated Velo SKUs',
+          owner: 'Regulatory & Legal · External counsel',
+          cost: '$3–5M legal/scientific; board-level sponsorship',
+          outcome: 'First-mover approval set closes defensive moat vs Altria on! PLUS',
+          kpi: 'Dossier complete by H1 2026 · 2 of 4 SKUs cleared by year-end',
+          rationale: 'Altria already has a PMTA cleared. Being second to approval on a new variant is worth less than being first — the window closes in 2026.',
+          priority: 3
+        },
+        {
+          title: 'Deploy demand sensing + VMI with top-50 US retail accounts',
+          owner: 'Supply Chain Ops · IT',
+          cost: '$2–4M tooling; 6-month rollout',
+          outcome: 'Dampen bullwhip by ~40%; cut forecast error at plant',
+          kpi: 'Forecast MAPE < 12% at plant · Days-on-hand variance halved',
+          rationale: 'At 47% category growth, small retail-demand swings are amplified into large plant-plan swings. Demand sensing and VMI are the standard CPG defences.',
+          priority: 4
+        },
+        {
+          title: 'Price-pack architecture refresh — test premium Velo SKU in two states',
+          owner: 'US Commercial · Pricing',
+          cost: '$1–2M test spend',
+          outcome: 'Test latent pricing power; revenue/volume decoupling',
+          kpi: '≥ 2pp price realisation without >3pp volume drag',
+          rationale: 'FY2025 revenue and volume grew in near lockstep (+47.4% vs +47.1%) — pricing power is latent, not active. A two-state test is a cheap option on meaningful upside.',
+          priority: 5
+        }
+      ]
+    };
+
+    /* ===== STATE ===== */
+    const state = {
+      region: 'GLOBAL',
+      scenario: 'base',
+      ue: { cans: 18, price: 2.0, gm: 55, ret: 70 },
+      cap: { capex: 50, cap: 35, price: 2.0, gm: 55 }
+    };
+    const charts = {};
+
+    /* ===== HELPERS ===== */
+    const getCss = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const fmtPct = v => v == null ? '—' : `${v.toFixed(1)}%`;
+    const fmtGbp = v => v == null ? '—' : `£${v.toLocaleString('en-GB')}m`;
+    const fmtUsd = v => v == null ? '—' : `$${Number(v).toFixed(2)}`;
+    const fmtUsdM = v => v == null ? '—' : `$${Number(v).toFixed(1)}M`;
+
+    /* Logistic fit between two disclosed share points — FOR VISUALISATION ONLY */
+    function logisticFit(start, end, steps) {
+      const k = 6; // steepness
+      const out = [];
+      for (let i = 0; i < steps; i++) {
+        const x = (i / (steps - 1)) * 2 - 1; // -1 to 1
+        const s = 1 / (1 + Math.exp(-k * x));
+        out.push(start + (end - start) * s);
+      }
+      return out;
+    }
+
+    function animateCount(el, target, dur = 900, suf = '', pre = '') {
+      if (window.matchMedia(`(prefers-reduced-motion: reduce)`).matches) {
+        el.textContent = pre + (Number.isInteger(target) ? target : target.toFixed(1)) + suf; return;
+      }
+      const start = performance.now();
+      const frame = (now) => {
+        const t = Math.min(1, (now - start) / dur);
+        const v = target * (1 - Math.pow(1 - t, 3));
+        el.textContent = pre + (Number.isInteger(target) ? Math.round(v) : v.toFixed(1)) + suf;
+        if (t < 1) requestAnimationFrame(frame);
+        else el.textContent = pre + (Number.isInteger(target) ? target : target.toFixed(1)) + suf;
+      };
+      requestAnimationFrame(frame);
+    }
+
+    /* ===== HERO KPIs ===== */
+    const HERO_KPIS = [
+      { id: 'kpi-rev',       label: 'Modern Oral Revenue (FY25)', value: 1165, prefix: '£', suffix: 'm', delta: '+47.4%', deltaType: 'up', sublabel: 'Volume +47.1% · growth is volume-led', source: 'BAT FY2025 Results' },
+      { id: 'kpi-vp',        label: 'Velo Plus US Revenue Growth', display: 'Triple-digit',                       delta: 'YoY',      deltaType: 'up', sublabel: 'First full year; disclosed qualitatively', source: 'BAT FY2025 Results' },
+      { id: 'kpi-share',     label: 'US Volume Share (Dec 2025)',  value: 24.0, suffix: '%',                        delta: '+17.9pp',  deltaType: 'up', sublabel: '#2 in category behind Zyn', source: 'Circana / Nielsen' },
+      { id: 'kpi-retention', label: 'Velo Plus Repurchase Rate',   value: 70,   suffix: '%',                        delta: '>category avg', deltaType: 'up', sublabel: 'LTV moat — protect before expansion', source: 'BAT H2 2025 commentary' }
+    ];
+
+    function renderKpis() {
+      const host = document.getElementById('hero-kpis');
+      if (!host) return;
+      host.innerHTML = '';
+      HERO_KPIS.forEach((k, i) => {
+        const unavailable = state.region === 'AME' && k.id !== 'kpi-rev';
+        const div = document.createElement('div');
+        div.className = `mcl-card p-5 flex flex-col justify-between relative ${unavailable ? '' : 'mcl-card-active'}`;
+        const deltaClass = k.deltaType === 'up' ? 'text-signal-green' : 'text-signal-red';
+        const deltaHtml = k.delta ? `<span class="${deltaClass} text-[11px] font-bold font-mono bg-carbon-3 px-2 py-0.5 rounded">${k.delta}</span>` : '';
+        const val = k.display || k.value;
+        const displayVal = unavailable ? '<span class="na-badge">N/A at this granularity</span>' : (typeof val === 'number' ? '0' : val);
+        const prefix = k.prefix || '';
+        const suffix = k.suffix || '';
+
+        div.innerHTML = `
+          <div>
+            <div class="flex justify-between items-start">
+              <h3 class="text-text-lo text-xs font-mono uppercase tracking-wider mb-3">${k.label}</h3>
+              ${deltaHtml}
+            </div>
+            <div class="flex items-end gap-1 mb-2">
+              <span class="text-3xl md:text-4xl font-display num-display text-text-hi" id="kpi-val-${i}">${prefix}${displayVal}${typeof val === 'number' && !unavailable ? suffix : ''}</span>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-text-mid leading-snug">${k.sublabel}</p>
+            <p class="text-[10px] text-text-lo mt-2 font-mono">SRC · ${k.source}</p>
+          </div>`;
+        host.appendChild(div);
+
+        if (!unavailable && typeof val === 'number') {
+          const el = document.getElementById(`kpi-val-${i}`);
+          el.textContent = prefix + '0' + suffix;
+          const obs = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) {
+              animateCount(el, val, 900, suffix, prefix);
+              obs.disconnect();
+            }
+          });
+          obs.observe(el);
+        }
+      });
+    }
+
+    /* ===== CHART INITIALISATION ===== */
+    function initChartDefaults() {
+      if (!window.Chart) return;
+      Chart.defaults.color = getCss('--text-lo');
+      Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+      Chart.defaults.font.size = 11;
+      Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+      Chart.defaults.plugins.legend.labels.usePointStyle = true;
+      Chart.defaults.plugins.tooltip.backgroundColor = getCss('--carbon-2');
+      Chart.defaults.plugins.tooltip.borderColor = getCss('--mcl-papaya');
+      Chart.defaults.plugins.tooltip.borderWidth = 1;
+      Chart.defaults.plugins.tooltip.padding = 12;
+      Chart.defaults.animation.duration = 800;
+      Chart.defaults.animation.easing = 'easeOutQuart';
+    }
+
+    function buildCharts() {
+      const el = id => document.getElementById(id);
+      const papaya = getCss('--mcl-papaya');
+      const papayaDim = getCss('--mcl-papaya-dim');
+      const papayaBright = getCss('--mcl-papaya-bright');
+      const blue = getCss('--velo-blue');
+      const green = getCss('--signal-green');
+      const red = getCss('--signal-red');
+      const amber = getCss('--signal-amber');
+      const lo = getCss('--text-lo');
+
+      /* --- Revenue + Volume YoY (grouped bar) --- */
+      if (el('chart-revenue-yoy')) {
+        charts.rev = new Chart(el('chart-revenue-yoy'), {
+          type: 'bar',
+          data: {
+            labels: ['2024', '2025'],
+            datasets: [
+              { label: 'Revenue (£m)', data: [791, 1165], backgroundColor: papaya, yAxisID: 'y', borderRadius: 4 },
+              { label: 'Implied Volume (indexed to 2024=100)', data: [100, 147.1], backgroundColor: blue, yAxisID: 'y1', borderRadius: 4 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y.toLocaleString()}` } }
+            },
+            scales: {
+              y:  { type: 'linear', position: 'left',  title: { display: true, text: 'Revenue (£m)', color: lo } },
+              y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Vol. index', color: lo } }
+            }
+          }
+        });
+      }
+
+      /* --- US Share: only endpoints solid; fit dashed --- */
+      if (el('chart-us-share')) {
+        const endpoints = DATA.actuals.usVeloShare.disclosedPoints;
+        const startPct = endpoints[0].pct;
+        const endPct = endpoints[1].pct;
+        const N = 14;
+        const labels = ['Nov-24','Dec-24','Jan-25','Feb-25','Mar-25','Apr-25','May-25','Jun-25','Jul-25','Aug-25','Sep-25','Oct-25','Nov-25','Dec-25'];
+        const fit = logisticFit(startPct, endPct, N);
+        const actualPoints = labels.map((_, i) => (i === 0 ? startPct : (i === N-1 ? endPct : null)));
+
+        charts.usShare = new Chart(el('chart-us-share'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Logistic fit (illustrative)', data: fit, borderColor: papayaDim, borderDash: [4,4], pointRadius: 0, fill: 'origin', backgroundColor: 'rgba(255,128,0,0.08)', tension: 0.35, borderWidth: 2 },
+              { label: 'BAT disclosed', data: actualPoints, borderColor: papayaBright, backgroundColor: papayaBright, pointRadius: 6, pointHoverRadius: 9, showLine: false }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: { callbacks: { label: c => c.parsed.y == null ? '' : `${c.dataset.label}: ${c.parsed.y.toFixed(1)}%` } }
+            },
+            scales: { y: { min: 0, max: 30, title: { display: true, text: 'Volume share (%)', color: lo } } }
+          }
+        });
+      }
+
+      /* --- Competitive donut --- */
+      if (el('chart-competitive-donut')) {
+        const comps = DATA.estimates.competitors;
+        charts.comp = new Chart(el('chart-competitive-donut'), {
+          type: 'doughnut',
+          data: {
+            labels: comps.map(c => c.brand),
+            datasets: [{
+              data: comps.map(c => c.share),
+              backgroundColor: comps.map(c => c.colour.startsWith('--') ? getCss(c.colour) : c.colour),
+              borderWidth: 1, borderColor: getCss('--carbon-2')
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
+            plugins: {
+              legend: { position: 'right' },
+              tooltip: { callbacks: { label: c => {
+                const info = comps[c.dataIndex];
+                const range = info.range ? ` (public range ${info.range[0]}–${info.range[1]}%)` : '';
+                return `${info.brand}: ${info.share}%${range}`;
+              } } }
+            }
+          }
+        });
+      }
+
+      /* --- Share evolution with Zyn band --- */
+      if (el('chart-share-evolution')) {
+        const endpoints = DATA.actuals.usVeloShare.disclosedPoints;
+        const N = 14;
+        const labels = ['Nov-24','Dec-24','Jan-25','Feb-25','Mar-25','Apr-25','May-25','Jun-25','Jul-25','Aug-25','Sep-25','Oct-25','Nov-25','Dec-25'];
+        const fit = logisticFit(endpoints[0].pct, endpoints[1].pct, N);
+        const actualPoints = labels.map((_, i) => (i === 0 ? endpoints[0].pct : (i === N-1 ? endpoints[1].pct : null)));
+        const zynLo = Array(N).fill(55);
+        const zynHi = Array(N).fill(70);
+        const zynMid = Array(N).fill(62);
+
+        charts.evol = new Chart(el('chart-share-evolution'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Zyn high (70%)', data: zynHi, borderColor: 'transparent', backgroundColor: 'rgba(0,144,212,0.12)', fill: '+1', pointRadius: 0, order: 4 },
+              { label: 'Zyn low (55%)',  data: zynLo, borderColor: 'transparent', backgroundColor: 'rgba(0,144,212,0.12)', fill: false, pointRadius: 0, order: 5 },
+              { label: 'Zyn mid estimate (~62%)', data: zynMid, borderColor: blue, borderDash: [6,4], borderWidth: 2, pointRadius: 0, order: 3 },
+              { label: 'Velo — logistic fit', data: fit, borderColor: papayaDim, borderDash: [4,4], pointRadius: 0, borderWidth: 2, tension: 0.35, order: 2 },
+              { label: 'Velo — disclosed', data: actualPoints, borderColor: papayaBright, backgroundColor: papayaBright, pointRadius: 6, pointHoverRadius: 9, showLine: false, order: 1 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { min: 0, max: 80, title: { display: true, text: 'Volume share (%)', color: lo } } }
+          }
+        });
+      }
+
+      /* --- Positioning matrix (scatter) --- */
+      if (el('chart-positioning')) {
+        charts.pos = new Chart(el('chart-positioning'), {
+          type: 'scatter',
+          data: {
+            datasets: [
+              { label: 'Velo Plus',     data: [{ x: 3, y: 4, r: 18 }], backgroundColor: papayaBright, borderColor: '#fff', borderWidth: 2 },
+              { label: 'Velo (core)',   data: [{ x: 5, y: 2, r: 14 }], backgroundColor: papayaDim, borderColor: '#fff', borderWidth: 1 },
+              { label: 'Zyn',           data: [{ x: 6, y: 3, r: 26 }], backgroundColor: blue, borderColor: '#fff', borderWidth: 1 },
+              { label: 'on! PLUS',      data: [{ x: 4, y: 3, r: 10 }], backgroundColor: '#888', borderColor: '#fff', borderWidth: 1 },
+              { label: 'Rogue / Others',data: [{ x: 5, y: 1, r: 8  }], backgroundColor: '#444', borderColor: '#fff', borderWidth: 1 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: { callbacks: { label: c => `${c.dataset.label}` } }
+            },
+            scales: {
+              x: { min: 0, max: 8, title: { display: true, text: '← Promo-priced          Premium-priced →', color: lo }, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { display: false } },
+              y: { min: 0, max: 5, title: { display: true, text: '← Lower innovation        Higher innovation →', color: lo }, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { display: false } }
+            },
+            elements: { point: { radius: ctx => (ctx.raw && ctx.raw.r) || 8, hoverRadius: ctx => ((ctx.raw && ctx.raw.r) || 8) + 3 } }
+          },
+          plugins: [{
+            id: 'posLabels',
+            afterDatasetsDraw(chart) {
+              const { ctx } = chart;
+              chart.data.datasets.forEach((ds, di) => {
+                const meta = chart.getDatasetMeta(di);
+                meta.data.forEach((pt, pi) => {
+                  ctx.save();
+                  ctx.fillStyle = '#fff';
+                  ctx.font = '600 11px Inter';
+                  ctx.textAlign = 'center';
+                  ctx.fillText(ds.label, pt.x, pt.y + 4);
+                  ctx.restore();
+                });
+              });
+            }
+          }]
+        });
+      }
+
+      /* --- Bullwhip --- */
+      if (el('chart-bullwhip')) {
+        charts.bw = new Chart(el('chart-bullwhip'), {
+          type: 'line',
+          data: {
+            labels: DATA.bullwhip.months,
+            datasets: [
+              { label: 'Retail demand',    data: DATA.bullwhip.retail,      borderColor: green, backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, pointRadius: 2 },
+              { label: 'Distributor orders', data: DATA.bullwhip.distributor, borderColor: amber, backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, pointRadius: 2 },
+              { label: 'Factory plan',      data: DATA.bullwhip.factory,     borderColor: red,  backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, pointRadius: 2 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { title: { display: true, text: 'Indexed (M1 = 100)', color: lo } } }
+          }
+        });
+      }
+
+      /* --- Inventory DOH --- */
+      if (el('chart-inventory')) {
+        const n = DATA.inventory.months.length;
+        charts.inv = new Chart(el('chart-inventory'), {
+          type: 'line',
+          data: {
+            labels: DATA.inventory.months,
+            datasets: [
+              { label: 'Target range (45–60d)',  data: Array(n).fill(DATA.inventory.targetHi), borderColor: 'transparent', backgroundColor: 'rgba(0,214,125,0.10)', fill: '+1', pointRadius: 0 },
+              { label: '',                        data: Array(n).fill(DATA.inventory.targetLo), borderColor: 'transparent', pointRadius: 0, fill: false },
+              { label: 'Safety stock (30d)',      data: Array(n).fill(DATA.inventory.safetyStock), borderColor: red, borderDash: [6,4], pointRadius: 0, borderWidth: 2 },
+              { label: 'Days on hand (illustrative)', data: DATA.inventory.days, borderColor: papayaBright, backgroundColor: papayaBright, borderWidth: 2.5, tension: 0.25, pointRadius: 3, pointHoverRadius: 6 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { filter: it => it.text !== '' } } },
+            scales: { y: { min: 0, max: 70, title: { display: true, text: 'Days on hand', color: lo } } }
+          }
+        });
+      }
+
+      /* --- Forecast fan --- */
+      if (el('chart-forecast')) {
+        charts.fc = new Chart(el('chart-forecast'), {
+          type: 'line',
+          data: { labels: [], datasets: [] },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: { callbacks: { label: c => c.parsed.y == null ? '' : `${c.dataset.label}: £${c.parsed.y.toLocaleString()}m` } }
+            },
+            scales: { y: { title: { display: true, text: 'Revenue (£m)', color: lo } } }
+          }
+        });
+        updateForecastChart();
+      }
+    }
+
+    function updateForecastChart() {
+      if (!charts.fc) return;
+      const hist = DATA.forecast.history;
+      const s = DATA.forecast.scenarios;
+      const labels = [...hist.map(h => h.year.toString()), '2026'];
+      const actual = [...hist.map(h => h.rev), null];
+      const bear = [null, hist[hist.length-1].rev, s.bear.rev];
+      const base = [null, hist[hist.length-1].rev, s.base.rev];
+      const bull = [null, hist[hist.length-1].rev, s.bull.rev];
+      const active = state.scenario;
+      const papaya = getCss('--mcl-papaya');
+      const papayaBright = getCss('--mcl-papaya-bright');
+      const green = getCss('--signal-green');
+      const red = getCss('--signal-red');
+
+      charts.fc.data = {
+        labels,
+        datasets: [
+          { label: 'Actual', data: actual, borderColor: papaya, backgroundColor: papaya, borderWidth: 3, pointRadius: 5, tension: 0 },
+          { label: 'Bull +45%', data: bull, borderColor: green, borderDash: [5,5], pointRadius: 4, borderWidth: active === 'bull' ? 3 : 1.5, tension: 0 },
+          { label: 'Base +30%', data: base, borderColor: papayaBright, borderDash: [5,5], pointRadius: 4, borderWidth: active === 'base' ? 3 : 1.5, tension: 0 },
+          { label: 'Bear +15%', data: bear, borderColor: red, borderDash: [5,5], pointRadius: 4, borderWidth: active === 'bear' ? 3 : 1.5, tension: 0 }
+        ]
+      };
+      charts.fc.update('active');
+    }
+
+    /* ===== MILESTONE RIBBON ===== */
+    function renderMilestones() {
+      const host = document.getElementById('milestone-ribbon');
+      if (!host) return;
+      host.innerHTML = '';
+      DATA.milestones.forEach((m, i) => {
+        const li = document.createElement('li');
+        li.className = 'flex md:flex-col gap-3 md:gap-2 flex-1 md:items-center md:text-center relative';
+        li.innerHTML = `
+          <div class="flex md:flex-col md:items-center gap-2 md:w-full">
+            <div class="milestone-dot ${m.type}"></div>
+            ${i < DATA.milestones.length - 1 ? '<div class="hidden md:block absolute top-[7px] left-1/2 w-full h-px bg-carbon-3" style="transform:translateX(0);"></div>' : ''}
+          </div>
+          <div>
+            <div class="text-[10px] font-mono text-mcl-papaya tracking-wider">${m.date}</div>
+            <div class="text-sm font-semibold text-text-hi">${m.label}</div>
+            <div class="text-xs text-text-lo">${m.detail}</div>
+          </div>`;
+        host.appendChild(li);
+      });
+    }
+
+    /* ===== RISK TABLE ===== */
+    function renderRiskTable() {
+      const tb = document.getElementById('risk-table-body');
+      if (!tb) return;
+      tb.innerHTML = '';
+      const sevColour = { HIGH: 'text-signal-red', MEDIUM: 'text-signal-amber', LOW: 'text-signal-green' };
+      DATA.risks.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-carbon-3 hover:bg-carbon-2';
+        tr.innerHTML = `
+          <td class="px-4 py-3 font-bold font-mono text-xs ${sevColour[r.sev]}">${r.sev}</td>
+          <td class="px-4 py-3 text-text-hi">${r.risk}</td>
+          <td class="px-4 py-3 text-text-mid font-mono text-xs">${r.revAtRisk}</td>
+          <td class="px-4 py-3 text-text-mid">${r.mitigation}</td>
+          <td class="px-4 py-3 text-text-lo text-xs">${r.owner}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    /* ===== SCENARIO SUMMARY ===== */
+    function renderScenarioSummary() {
+      const host = document.getElementById('scenario-summary');
+      if (!host) return;
+      const s = DATA.forecast.scenarios[state.scenario];
+      const last = DATA.forecast.history[DATA.forecast.history.length - 1].rev;
+      const delta = s.rev - last;
+      host.innerHTML = `
+        <div class="flex items-baseline gap-2">
+          <span class="text-[10px] font-mono tracking-widest text-mcl-papaya uppercase">${state.scenario} case · 2026E</span>
+        </div>
+        <div class="flex items-baseline gap-3">
+          <span class="text-4xl font-display num-display text-text-hi">£${s.rev.toLocaleString()}m</span>
+          <span class="text-signal-green text-sm font-mono">+${s.yoy}%</span>
+        </div>
+        <p class="text-xs text-text-mid leading-relaxed">${s.rationale}</p>
+        <div>
+          <div class="text-[10px] font-mono text-text-lo uppercase tracking-wider mb-1">Drivers</div>
+          <ul class="text-xs text-text-mid space-y-1">
+            ${s.drivers.map(d => `<li class="flex gap-2"><span class="text-mcl-papaya">›</span><span>${d}</span></li>`).join('')}
+          </ul>
+        </div>
+        <div class="pt-2 border-t border-carbon-3 text-[11px] text-text-lo font-mono">
+          vs FY25 (£${last.toLocaleString()}m): <span class="text-text-hi">+£${delta.toLocaleString()}m</span> incremental
+        </div>`;
+    }
+
+    /* ===== UNIT ECONOMICS ===== */
+    function recalcUnitEconomics() {
+      const { cans, price, gm, ret } = state.ue;
+      const monthlyContrib = cans * price * (gm / 100);
+      const retFrac = ret / 100;
+      const life = 1 / (1 - retFrac);
+      const ltv = monthlyContrib * life;
+
+      document.getElementById('ue-cans-val').textContent = cans;
+      document.getElementById('ue-price-val').textContent = price.toFixed(2);
+      document.getElementById('ue-gm-val').textContent = gm;
+      document.getElementById('ue-ret-val').textContent = ret;
+      document.getElementById('ue-monthly').textContent = fmtUsd(monthlyContrib);
+      document.getElementById('ue-life').textContent = life.toFixed(1);
+      document.getElementById('ue-ltv').textContent = `$${ltv.toFixed(0)}`;
+    }
+
+    /* ===== CAPEX PAYBACK ===== */
+    function recalcCapex() {
+      const { capex, cap, price, gm } = state.cap;
+      const annualContrib = cap * price * (gm / 100);          // $M/yr
+      const paybackMonths = (capex / annualContrib) * 12;
+      const discount = 0.10;
+      let npv = -capex;
+      for (let y = 1; y <= 3; y++) npv += annualContrib / Math.pow(1 + discount, y);
+
+      document.getElementById('cap-capex-val').textContent = capex;
+      document.getElementById('cap-cap-val').textContent = cap;
+      document.getElementById('cap-price-val').textContent = price.toFixed(2);
+      document.getElementById('cap-gm-val').textContent = gm;
+      document.getElementById('cap-contrib').textContent = fmtUsdM(annualContrib);
+      document.getElementById('cap-payback').textContent = `${paybackMonths.toFixed(1)} mo`;
+      document.getElementById('cap-npv').textContent = fmtUsdM(npv);
+    }
+
+    /* ===== RECOMMENDATIONS ===== */
+    function renderRecommendations() {
+      const host = document.getElementById('recommendations-container');
+      if (!host) return;
+      host.innerHTML = '';
+      DATA.recommendations.forEach(r => {
+        const div = document.createElement('article');
+        div.className = 'mcl-card p-5 flex flex-col gap-3';
+        div.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="shrink-0 w-8 h-8 bg-mcl-papaya text-black font-display font-black flex items-center justify-center rounded">${r.priority}</div>
+            <h3 class="font-display font-bold text-base leading-tight">${r.title}</h3>
+          </div>
+          <p class="text-sm text-text-mid">${r.rationale}</p>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-t border-carbon-3 pt-3">
+            <div>
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-text-lo">Owner</dt>
+              <dd class="text-text-hi">${r.owner}</dd>
+            </div>
+            <div>
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-text-lo">Cost / Effort</dt>
+              <dd class="text-text-hi">${r.cost}</dd>
+            </div>
+            <div class="col-span-2">
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-text-lo">Expected Outcome</dt>
+              <dd class="text-text-hi">${r.outcome}</dd>
+            </div>
+            <div class="col-span-2 bg-carbon-3 p-2 rounded">
+              <dt class="font-mono text-[10px] uppercase tracking-wider text-mcl-papaya">Measured by</dt>
+              <dd class="text-text-hi font-mono text-xs mt-1">${r.kpi}</dd>
+            </div>
+          </dl>`;
+        host.appendChild(div);
+      });
+    }
+
+    /* ===== NAV + FILTERS + EXPORTS ===== */
+    function setupNav() {
+      const links = document.querySelectorAll('.nav-link');
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting && e.intersectionRatio >= 0.2) {
+            links.forEach(l => {
+              if (l.getAttribute('href') === '#' + e.target.id) l.classList.add('text-mcl-papaya','border-b-2','border-mcl-papaya');
+              else l.classList.remove('text-mcl-papaya','border-b-2','border-mcl-papaya');
+            });
+          }
+        });
+      }, { threshold: 0.2, rootMargin: '-64px 0px -50% 0px' });
+      document.querySelectorAll('main section').forEach(s => obs.observe(s));
+      links.forEach(l => l.addEventListener('click', ev => {
+        ev.preventDefault();
+        const t = document.getElementById(l.getAttribute('href').substring(1));
+        if (t) window.scrollTo({ top: t.offsetTop - 64, behavior: 'smooth' });
+      }));
+    }
+
+    function setupScenarioPills() {
+      document.querySelectorAll('.scenario-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.scenario = btn.getAttribute('data-scenario');
+          document.querySelectorAll('.scenario-pill').forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+          updateForecastChart();
+          renderScenarioSummary();
+          persistState();
+        });
+      });
+    }
+
+    function setupUnitEconomics() {
+      const map = { cans: 'ue-cans', price: 'ue-price', gm: 'ue-gm', ret: 'ue-ret' };
+      Object.entries(map).forEach(([key, id]) => {
+        const ctl = document.getElementById(id);
+        if (!ctl) return;
+        ctl.addEventListener('input', e => {
+          const v = parseFloat(e.target.value);
+          state.ue[key] = v;
+          recalcUnitEconomics();
+        });
+      });
+    }
+
+    function setupCapex() {
+      const map = { capex: 'cap-capex', cap: 'cap-cap', price: 'cap-price', gm: 'cap-gm' };
+      Object.entries(map).forEach(([key, id]) => {
+        const ctl = document.getElementById(id);
+        if (!ctl) return;
+        ctl.addEventListener('input', e => {
+          const v = parseFloat(e.target.value);
+          state.cap[key] = v;
+          recalcCapex();
+        });
+      });
+    }
+
+    function persistState() {
+      history.replaceState(null, null, `#region=${state.region}&scenario=${state.scenario}`);
+    }
+
+    function readState() {
+      const h = location.hash;
+      if (!h || !h.includes('=')) return;
+      const p = new URLSearchParams(h.replace(/^#/,''));
+      if (p.has('region'))   state.region   = p.get('region');
+      if (p.has('scenario')) state.scenario = p.get('scenario');
+    }
+
+    function setupFilters() {
+      const r = document.getElementById('filter-region');
+      if (r) {
+        r.value = state.region;
+        r.addEventListener('change', e => {
+          state.region = e.target.value;
+          renderKpis();
+          persistState();
+        });
+      }
+      document.querySelectorAll('.scenario-pill').forEach(btn => {
+        btn.setAttribute('aria-pressed', btn.getAttribute('data-scenario') === state.scenario ? 'true' : 'false');
+      });
+    }
+
+    function setupMethodologyModal() {
+      const modal = document.getElementById('methodology-modal');
+      const open = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); document.body.style.overflow = 'hidden'; };
+      const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); document.body.style.overflow = ''; };
+      document.getElementById('btn-methodology').addEventListener('click', open);
+      document.getElementById('btn-close-method').addEventListener('click', close);
+      modal.addEventListener('click', e => { if (e.target === modal) close(); });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') close();
+        if (e.key === '?' && !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) open();
+      });
+    }
+
+    function setupExports() {
+      const csvBtn = document.getElementById('btn-export-csv');
+      if (csvBtn) csvBtn.addEventListener('click', () => {
+        let csv = 'Section,Metric,Value,Source\n';
+        const a = DATA.actuals.modernOral;
+        csv += `Actuals,Revenue 2024 (£m),${a.revenue_2024},BAT FY2025\n`;
+        csv += `Actuals,Revenue 2025 (£m),${a.revenue_2025},BAT FY2025\n`;
+        csv += `Actuals,Revenue growth YoY,${a.revenue_growth_pct}%,BAT FY2025\n`;
+        csv += `Actuals,Volume growth YoY,${a.volume_growth_pct}%,BAT FY2025\n`;
+        DATA.actuals.usVeloShare.disclosedPoints.forEach(p => {
+          csv += `Actuals,US Velo share ${p.month},${p.pct}%,${p.source}\n`;
+        });
+        csv += `Actuals,Velo Plus repurchase,${DATA.actuals.veloPlus.repurchaseRatePct}%,BAT H2 2025 commentary\n`;
+        csv += `Actuals,Stores covered (k),${DATA.actuals.rollout.storesK},BAT FY2025\n`;
+        Object.entries(DATA.forecast.scenarios).forEach(([k, v]) => {
+          csv += `Forecast,${k.toUpperCase()} 2026 revenue (£m),${v.rev},Parametric model\n`;
+        });
+        const a2 = document.createElement('a');
+        a2.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        a2.download = `velo-dash-${new Date().toISOString().split('T')[0]}.csv`;
+        a2.click();
+      });
+
+      const pdfBtn = document.getElementById('btn-export-pdf');
+      if (pdfBtn) pdfBtn.addEventListener('click', async () => {
+        const orig = pdfBtn.innerHTML; pdfBtn.innerHTML = '…';
+        try {
+          if (!window.html2canvas) await new Promise((r, j) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; s.onload = r; s.onerror = j; document.head.appendChild(s); });
+          if (!window.jspdf)      await new Promise((r, j) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload = r; s.onerror = j; document.head.appendChild(s); });
+          const pdf = new window.jspdf.jsPDF('l', 'pt', 'a4');
+          const secs = document.querySelectorAll('main section');
+          for (let i = 0; i < secs.length; i++) {
+            if (i > 0) pdf.addPage();
+            const c = await html2canvas(secs[i], { scale: 1.5, backgroundColor: '#000' });
+            pdf.addImage(c.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 20, pdf.internal.pageSize.getWidth(), (c.height * pdf.internal.pageSize.getWidth()) / c.width);
+          }
+          pdf.save(`velo-dash-${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (e) { alert('PDF export failed — try browser print instead.'); }
+        finally { pdfBtn.innerHTML = orig; }
+      });
+
+      document.querySelectorAll('.export-png-btn').forEach(btn => btn.addEventListener('click', () => {
+        const c = document.getElementById(btn.getAttribute('data-target'));
+        if (!c) return;
+        const a = document.createElement('a');
+        a.download = `${btn.getAttribute('data-target')}.png`;
+        a.href = c.toDataURL('image/png', 1);
+        a.click();
+      }));
+    }
+
+    /* ===== INIT ===== */
+    document.addEventListener('DOMContentLoaded', () => {
+      const dt = new Date().toISOString().split('T')[0];
+      document.getElementById('last-updated').textContent = `BUILD · ${dt}`;
+      document.getElementById('build-date').textContent = dt;
+
+      readState();
+
+      if (typeof Chart === 'undefined') {
+        const b = document.createElement('div');
+        b.className = 'bg-signal-red text-white p-3 text-center text-sm font-bold';
+        b.textContent = 'Chart library failed to load — check your network and reload.';
+        document.body.prepend(b);
+      } else {
+        try { initChartDefaults(); buildCharts(); } catch (e) { console.error(e); }
+      }
+
+      renderKpis();
+      renderMilestones();
+      renderRiskTable();
+      renderScenarioSummary();
+      renderRecommendations();
+      recalcUnitEconomics();
+      recalcCapex();
+
+      setupNav();
+      setupFilters();
+      setupScenarioPills();
+      setupUnitEconomics();
+      setupCapex();
+      setupMethodologyModal();
+      setupExports();
+
+      let rt;
+      window.addEventListener('resize', () => {
+        clearTimeout(rt);
+        rt = setTimeout(() => Object.values(charts).forEach(c => c && c.resize()), 150);
+      });
+    });
+  </script>
+</body>
+</html>
